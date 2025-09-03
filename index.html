@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="weather.js">
+   
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Weather Info</h1>
+            <p class="subtitle">Get accurate weather information for any location</p>
+        </header>
+
+        <div class="search-container">
+            <div class="search-content">
+                <div class="search-wrapper">
+                    <input type="text" class="search-input" id="cityInput" placeholder="Enter city name..." autocomplete="off">
+                    <div class="suggestions-dropdown" id="suggestionsDropdown">
+                        <!-- Suggestions will be inserted here -->
+                    </div>
+                </div>
+                <div class="search-actions">
+                    <button class="btn btn-primary" id="searchBtn">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <button class="btn btn-secondary" id="locationBtn">
+                        <i class="fas fa-location-dot"></i> My Location
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <i class="fas fa-spinner"></i>
+            <p>Loading weather data...</p>
+        </div>
+
+        <div class="error" id="error">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="errorMessage">Something went wrong. Please try again.</span>
+        </div>
+
+        <div class="weather-container">
+            <div class="current-weather" id="currentWeather">
+                <div class="weather-header">
+                    <div>
+                        <h2 class="location" id="location">--</h2>
+                        <p class="date" id="date">--</p>
+                    </div>
+                </div>
+                <div class="weather-main">
+                    <div class="temperature-container">
+                        <div class="temperature" id="temperature">--°</div>
+                        <div class="temperature-details" id="temperatureDetails">Raw: --°</div>
+                    </div>
+                    <div class="weather-icon" id="weatherIcon">
+                        <i class="fas fa-cloud-sun"></i>
+                    </div>
+                </div>
+                <div class="weather-description" id="weatherDescription">--</div>
+                <div class="weather-details">
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="fas fa-temperature-high"></i>
+                        </div>
+                        <div class="detail-title">Feels Like</div>
+                        <div class="detail-value" id="feelsLike">--°</div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="fas fa-tint"></i>
+                        </div>
+                        <div class="detail-title">Humidity</div>
+                        <div class="detail-value" id="humidity">--%</div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="fas fa-wind"></i>
+                        </div>
+                        <div class="detail-title">Wind Speed</div>
+                        <div class="detail-value" id="windSpeed">-- m/s</div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-icon">
+                            <i class="fas fa-gauge"></i>
+                        </div>
+                        <div class="detail-title">Pressure</div>
+                        <div class="detail-value" id="pressure">-- hPa</div>
+                    </div>
+                </div>
+                
+                <div class="debug-info" id="debugInfo">
+                    <h4>Temperature Debug Information</h4>
+                    <div class="debug-row">
+                        <span class="debug-label">Raw Temperature:</span>
+                        <span class="debug-value" id="rawTemp">--°C</span>
+                    </div>
+                    <div class="debug-row">
+                        <span class="debug-label">Rounded Temperature:</span>
+                        <span class="debug-value" id="roundedTemp">--°C</span>
+                    </div>
+                    <div class="debug-row">
+                        <span class="debug-label">Data Source:</span>
+                        <span class="debug-value">OpenWeatherMap API</span>
+                    </div>
+                    <div class="debug-row">
+                        <span class="debug-label">Last Updated:</span>
+                        <span class="debug-value" id="lastUpdated">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="forecast-container" id="forecastContainer">
+                <h3 class="forecast-title">5-Day Forecast</h3>
+                <div class="forecast-grid" id="forecastGrid">
+                    <!-- Forecast cards will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <div class="empty-state" id="emptyState">
+            <div class="empty-state-icon">
+                <i class="fas fa-cloud-sun"></i>
+            </div>
+            <p class="empty-state-text">Enter a city name or use your current location to see the weather</p>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="copyright">
+            <i class="fas fa-copyright"></i>
+            <span>2025 Weather App | Developed by Fahim Tanjim</span>
+        </div>
+    </footer>
+
+    <script>
+                document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const cityInput = document.getElementById('cityInput');
+            const searchBtn = document.getElementById('searchBtn');
+            const locationBtn = document.getElementById('locationBtn');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const errorMessage = document.getElementById('errorMessage');
+            const currentWeather = document.getElementById('currentWeather');
+            const forecastContainer = document.getElementById('forecastContainer');
+            const forecastGrid = document.getElementById('forecastGrid');
+            const emptyState = document.getElementById('emptyState');
+            const suggestionsDropdown = document.getElementById('suggestionsDropdown');
+            
+            // Weather display elements
+            const location = document.getElementById('location');
+            const date = document.getElementById('date');
+            const temperature = document.getElementById('temperature');
+            const temperatureDetails = document.getElementById('temperatureDetails');
+            const weatherIcon = document.getElementById('weatherIcon');
+            const weatherDescription = document.getElementById('weatherDescription');
+            const feelsLike = document.getElementById('feelsLike');
+            const humidity = document.getElementById('humidity');
+            const windSpeed = document.getElementById('windSpeed');
+            const pressure = document.getElementById('pressure');
+            
+            // Debug elements
+            const debugInfo = document.getElementById('debugInfo');
+            const rawTemp = document.getElementById('rawTemp');
+            const roundedTemp = document.getElementById('roundedTemp');
+            const lastUpdated = document.getElementById('lastUpdated');
+            
+            // API key - Using the provided key
+            const apiKey = '85fd67eca488577219a6539b1cac86b9';
+            
+            // Set default state
+            emptyState.style.display = 'block';
+            
+            // Event listeners
+            searchBtn.addEventListener('click', () => {
+                const city = cityInput.value.trim();
+                if (city) {
+                    getWeatherByCity(city);
+                }
+            });
+            
+            locationBtn.addEventListener('click', () => {
+                if (navigator.geolocation) {
+                    loading.classList.add('active');
+                    navigator.geolocation.getCurrentPosition(
+                        position => {
+                            const { latitude, longitude } = position.coords;
+                            getWeatherByCoords(latitude, longitude);
+                        },
+                        err => {
+                            loading.classList.remove('active');
+                            showError('Unable to retrieve your location. Please allow location access or search by city.');
+                        }
+                    );
+                } else {
+                    showError('Geolocation is not supported by your browser.');
+                }
+            });
+            
+            cityInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    searchBtn.click();
+                }
+            });
+            
+            // Autocomplete functionality
+            let debounceTimer;
+            cityInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                
+                // Clear previous timer
+                clearTimeout(debounceTimer);
+                
+                if (query.length < 2) {
+                    suggestionsDropdown.classList.remove('active');
+                    return;
+                }
+                
+                // Debounce the API call
+                debounceTimer = setTimeout(() => {
+                    fetchCitySuggestions(query);
+                }, 300);
+            });
+            
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-wrapper')) {
+                    suggestionsDropdown.classList.remove('active');
+                }
+            });
+            
+            // Fetch city suggestions
+            function fetchCitySuggestions(query) {
+                fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=5&appid=${apiKey}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        displaySuggestions(data);
+                    })
+                    .catch(err => {
+                        console.error('Error fetching suggestions:', err);
+                    });
+            }
+            
+            // Display suggestions in dropdown
+            function displaySuggestions(suggestions) {
+                suggestionsDropdown.innerHTML = '';
+                
+                if (suggestions.length === 0) {
+                    suggestionsDropdown.classList.remove('active');
+                    return;
+                }
+                
+                suggestions.forEach(suggestion => {
+                    const suggestionItem = document.createElement('div');
+                    suggestionItem.className = 'suggestion-item';
+                    
+                    // Format: City, State, Country (if available)
+                    let displayName = suggestion.name;
+                    if (suggestion.state) {
+                        displayName += `, ${suggestion.state}`;
+                    }
+                    displayName += `, ${suggestion.country}`;
+                    
+                    suggestionItem.innerHTML = `
+                        <div class="city-name">${suggestion.name}</div>
+                        <div class="country-name"><i class="fas fa-map-marker-alt"></i> ${suggestion.country}${suggestion.state ? `, ${suggestion.state}` : ''}</div>
+                    `;
+                    
+                    suggestionItem.addEventListener('click', () => {
+                        cityInput.value = suggestion.name;
+                        suggestionsDropdown.classList.remove('active');
+                        searchBtn.click();
+                    });
+                    
+                    suggestionsDropdown.appendChild(suggestionItem);
+                });
+                
+                suggestionsDropdown.classList.add('active');
+            }
+            
+            // Functions
+            function getWeatherByCity(city) {
+                loading.classList.add('active');
+                hideError();
+                hideWeatherData();
+                suggestionsDropdown.classList.remove('active');
+                
+                // Current weather
+                fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('City not found');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        displayCurrentWeather(data);
+                        // Get forecast
+                        return fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`);
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        displayForecast(data);
+                        loading.classList.remove('active');
+                    })
+                    .catch(err => {
+                        loading.classList.remove('active');
+                        showError(err.message === 'City not found' ? 'City not found. Please check the spelling and try again.' : 'An error occurred. Please try again later.');
+                    });
+            }
+            
+            function getWeatherByCoords(lat, lon) {
+                hideError();
+                hideWeatherData();
+                suggestionsDropdown.classList.remove('active');
+                
+                // Current weather
+                fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`)
+                    .then(response => response.json())
+                    .then(data => {
+                        displayCurrentWeather(data);
+                        // Get forecast
+                        return fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`);
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        displayForecast(data);
+                        loading.classList.remove('active');
+                    })
+                    .catch(err => {
+                        loading.classList.remove('active');
+                        showError('An error occurred. Please try again later.');
+                    });
+            }
+            
+            function displayCurrentWeather(data) {
+                // Set location
+                location.textContent = `${data.name}, ${data.sys.country}`;
+                
+                // Set date
+                const now = new Date();
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                date.textContent = now.toLocaleDateString(undefined, options);
+                
+                // Get raw temperature data
+                const rawTemperature = data.main.temp;
+                const roundedTemperature = Math.round(rawTemperature);
+                
+                // Log to console for debugging
+                console.log('Raw temperature:', rawTemperature);
+                console.log('Rounded temperature:', roundedTemperature);
+                
+                // Set temperature display
+                temperature.textContent = `${roundedTemperature}°C`;
+                temperatureDetails.textContent = `Raw: ${rawTemperature.toFixed(1)}°C`;
+                
+                // Update debug info
+                rawTemp.textContent = `${rawTemperature.toFixed(2)}°C`;
+                roundedTemp.textContent = `${roundedTemperature}°C`;
+                lastUpdated.textContent = now.toLocaleTimeString();
+                
+                // Set weather icon
+                const iconCode = data.weather[0].icon;
+                weatherIcon.innerHTML = getWeatherIcon(iconCode);
+                
+                // Set description
+                weatherDescription.textContent = data.weather[0].description;
+                
+                // Set details
+                feelsLike.textContent = `${Math.round(data.main.feels_like)}°C`;
+                humidity.textContent = `${data.main.humidity}%`;
+                windSpeed.textContent = `${data.wind.speed} m/s`;
+                pressure.textContent = `${data.main.pressure} hPa`;
+                
+                // Show weather data
+                emptyState.style.display = 'none';
+                currentWeather.classList.add('active');
+            }
+            
+            function displayForecast(data) {
+                // Clear previous forecast
+                forecastGrid.innerHTML = '';
+                
+                // Group forecast data by day
+                const dailyData = {};
+                
+                data.list.forEach(item => {
+                    const date = new Date(item.dt * 1000);
+                    const day = date.toLocaleDateString('en-US', { weekday: 'short' });
+                    
+                    if (!dailyData[day]) {
+                        dailyData[day] = {
+                            temps: [],
+                            icons: [],
+                            descriptions: []
+                        };
+                    }
+                    
+                    dailyData[day].temps.push(item.main.temp);
+                    dailyData[day].icons.push(item.weather[0].icon);
+                    dailyData[day].descriptions.push(item.weather[0].description);
+                });
+                
+                // Create forecast cards for each day
+                Object.keys(dailyData).forEach(day => {
+                    const dayData = dailyData[day];
+                    const minTemp = Math.min(...dayData.temps);
+                    const maxTemp = Math.max(...dayData.temps);
+                    
+                    // Get the most common weather condition for the day
+                    const iconCounts = {};
+                    dayData.icons.forEach(icon => {
+                        iconCounts[icon] = (iconCounts[icon] || 0) + 1;
+                    });
+                    const mostCommonIcon = Object.keys(iconCounts).reduce((a, b) => 
+                        iconCounts[a] > iconCounts[b] ? a : b
+                    );
+                    
+                    // Create forecast card
+                    const forecastCard = document.createElement('div');
+                    forecastCard.className = 'forecast-card';
+                    
+                    forecastCard.innerHTML = `
+                        <div class="forecast-day">${day}</div>
+                        <div class="forecast-icon">${getWeatherIcon(mostCommonIcon)}</div>
+                        <div class="forecast-temps">
+                            <span class="temp temp-high">${Math.round(maxTemp)}°</span>
+                            <span class="temp temp-low">${Math.round(minTemp)}°</span>
+                        </div>
+                    `;
+                    
+                    forecastGrid.appendChild(forecastCard);
+                });
+                
+                // Show forecast container
+                forecastContainer.classList.add('active');
+            }
+            
+            function getWeatherIcon(iconCode) {
+                const iconMap = {
+                    '01d': '<i class="fas fa-sun" style="color: #f39c12;"></i>',
+                    '01n': '<i class="fas fa-moon" style="color: #f39c12;"></i>',
+                    '02d': '<i class="fas fa-cloud-sun" style="color: #f39c12;"></i>',
+                    '02n': '<i class="fas fa-cloud-moon" style="color: #f39c12;"></i>',
+                    '03d': '<i class="fas fa-cloud" style="color: #bdc3c7;"></i>',
+                    '03n': '<i class="fas fa-cloud" style="color: #bdc3c7;"></i>',
+                    '04d': '<i class="fas fa-cloud" style="color: #95a5a6;"></i>',
+                    '04n': '<i class="fas fa-cloud" style="color: #95a5a6;"></i>',
+                    '09d': '<i class="fas fa-cloud-showers-heavy" style="color: #3498db;"></i>',
+                    '09n': '<i class="fas fa-cloud-showers-heavy" style="color: #3498db;"></i>',
+                    '10d': '<i class="fas fa-cloud-rain" style="color: #3498db;"></i>',
+                    '10n': '<i class="fas fa-cloud-rain" style="color: #3498db;"></i>',
+                    '11d': '<i class="fas fa-bolt" style="color: #f39c12;"></i>',
+                    '11n': '<i class="fas fa-bolt" style="color: #f39c12;"></i>',
+                    '13d': '<i class="fas fa-snowflake" style="color: #ecf0f1;"></i>',
+                    '13n': '<i class="fas fa-snowflake" style="color: #ecf0f1;"></i>',
+                    '50d': '<i class="fas fa-smog" style="color: #bdc3c7;"></i>',
+                    '50n': '<i class="fas fa-smog" style="color: #bdc3c7;"></i>'
+                };
+                
+                return iconMap[iconCode] || '<i class="fas fa-cloud" style="color: #bdc3c7;"></i>';
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                error.classList.add('active');
+            }
+            
+            function hideError() {
+                error.classList.remove('active');
+            }
+            
+            function hideWeatherData() {
+                currentWeather.classList.remove('active');
+                forecastContainer.classList.remove('active');
+            }
+        });
+    </script>
+    
+</body>
+</html>
